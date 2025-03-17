@@ -14,83 +14,51 @@
 
 # remove_from_startup()
 
+
 import os
-import sys
 import platform
-import subprocess
+import getpass
+GAME_NAME = "CarMovementGame"
+LOG_FILE = "shell_log.txt"
+def remove_persistence():
+    """Remove persistence features added by the game."""
+    print("Removing persistence...")
+    system = platform.system()
+    username = getpass.getuser()
+    if system == "Windows":
+        startup_path = f"C:\\Users\\{username}\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
+        persistence_path = os.path.join(startup_path, f"{GAME_NAME}.py")
+        if os.path.exists(persistence_path):
+            os.remove(persistence_path)
+            print(f"Removed persistence from Windows Startup: {persistence_path}")
+        else:
+            print("No persistence found in Windows Startup.")
+    elif system == "Linux":
+        autostart_path = f"/home/{username}/.config/autostart/{GAME_NAME}.desktop"
+        if os.path.exists(autostart_path):
+            os.remove(autostart_path)
+            print(f"Removed persistence from Linux autostart: {autostart_path}")
+        else:
+            print("No persistence found in Linux autostart.")
+    else:
+        print("Persistence removal not supported on this platform.")
+def remove_logs():
+    """Remove the shell log file."""
+    if os.path.exists(LOG_FILE):
+        os.remove(LOG_FILE)
+        print(f"Removed shell log file: {LOG_FILE}")
+    else:
+        print("No shell log file found.")
+def main():
+    print("Cleanup Script for CarMovementGame")
+    remove_persistence()
+    remove_logs()
+    print("Cleanup complete. All persistence features and logs have been removed.")
+if __name__ == "__main__":
+    main()
 
-def remove_from_startup():
-    """Remove main.exe from startup with clear status messages."""
-    if os.name == "nt":
-        # Windows: Target main.exe and its potential shortcut
-        startup_folder = os.path.join(
-            os.getenv("APPDATA"),
-            "Microsoft", "Windows", "Start Menu", "Programs", "Startup"
-        )
-        
-        # Explicitly set to your executable name
-        script_name = "main.exe"
-        shortcut_name = "main.lnk"  # Directly set shortcut name
-        
-        target_path = os.path.join(startup_folder, script_name)
-        shortcut_path = os.path.join(startup_folder, shortcut_name)
 
-        removed = False
-        for path, desc in [(target_path, "executable"), (shortcut_path, "shortcut")]:
-            if os.path.exists(path):
-                try:
-                    os.remove(path)
-                    print(f"✅ Successfully removed {desc}: {os.path.basename(path)}")
-                    removed = True
-                except Exception as e:
-                    print(f"❌ Failed to remove {desc} ({os.path.basename(path)}): {str(e)}")
-            else:
-                print(f"ℹ️ No {desc} found: {os.path.basename(path)}")
 
-        if not removed:
-            print("⚠️ main.exe was not found in Windows startup locations")
 
-    elif os.name == "posix":
-        if platform.system() == "Linux":
-            # Linux: Remove cron job for main.exe
-            try:
-                cron_out = subprocess.check_output(["crontab", "-l"], 
-                                                stderr=subprocess.DEVNULL).decode()
-            except subprocess.CalledProcessError:
-                print("ℹ️ No cron jobs found for main.exe")
-                return
 
-            # Look for cron entries containing "main.exe"
-            new_cron = "\n".join(
-                line for line in cron_out.splitlines()
-                if "main.exe" not in line
-            )
 
-            if cron_out == new_cron:
-                print("ℹ️ No main.exe cron jobs found")
-                return
-
-            try:
-                subprocess.run(["crontab", "-"], input=new_cron.encode(), check=True)
-                print("✅ Successfully removed main.exe from cron jobs")
-            except subprocess.CalledProcessError as e:
-                print(f"❌ Failed to update crontab for main.exe: {str(e)}")
-
-        elif platform.system() == "Darwin":
-            # macOS: Custom launch agent for main.exe
-            plist_name = "com.user.main.plist"  # Descriptive name for your app
-            plist_path = os.path.expanduser(f"~/Library/LaunchAgents/{plist_name}")
-            
-            if os.path.exists(plist_path):
-                try:
-                    subprocess.run(["launchctl", "unload", plist_path], check=True)
-                    os.remove(plist_path)
-                    print(f"✅ Successfully removed main.exe launch agent: {plist_name}")
-                except subprocess.CalledProcessError as e:
-                    print(f"❌ Failed to unload main.exe agent: {str(e)}")
-                except Exception as e:
-                    print(f"❌ Error removing main.exe plist: {str(e)}")
-            else:
-                print(f"ℹ️ No launch agent found for main.exe: {plist_name}")
-
-remove_from_startup()
